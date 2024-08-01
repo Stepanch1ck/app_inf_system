@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import Navigation from '../components/navigation';
 import Option from 'antd/es/select'
 import router from 'next/router';
+import fetchApi from '../utils/api'; 
 
 interface AttributeWithValueDto {
   id: number;
@@ -38,58 +39,26 @@ const InformationSystemsPage: React.FC = () => {
   
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login'); 
-        return;
-      }
-
+    const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:5295/api/users/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          setUserRoles([userData.role.name]);
-        } else {
-          console.error('Ошибка при получении данных пользователя:', response.status);
-          message.error('Ошибка авторизации');
-          localStorage.removeItem('token');
-          router.push('/login');
-        }
+        const users = await fetchApi('Users');
+        setUserRoles(users);
       } catch (error) {
         console.error('Ошибка при получении данных пользователя:', error);
         message.error('Ошибка при получении данных пользователя');
       }
     };
 
-    fetchUserData();
+    fetchUsers();
   }, []);
 
   useEffect(() => {
     const fetchInformationSystems = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
+      
       try {
-        const response = await fetch('http://localhost:5295/api/InformationSystems/with-attributes', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-
-          setInformationSystems(data);
-        } else {
-          console.error('Ошибка при получении данных:', response.status);
-          message.error('Ошибка при получении данных');
-          
-        }
+        const response = await fetchApi('InformationSystems/with-attributes')
+        
+    
       } catch (error) {
         console.error('Ошибка при получении данных:', error);
         message.error('Ошибка при получении данных');
