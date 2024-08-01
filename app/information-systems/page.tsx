@@ -39,32 +39,29 @@ const InformationSystemsPage: React.FC = () => {
   
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUserData = async () => {
       try {
-        const users = await fetchApi('Users');
-        setUserRoles(users);
+        const userData = await fetchApi('users/me');
+        setUserRoles([userData.role.name]);
       } catch (error) {
         console.error('Ошибка при получении данных пользователя:', error);
         message.error('Ошибка при получении данных пользователя');
       }
     };
 
-    fetchUsers();
+    fetchUserData();
   }, []);
 
   useEffect(() => {
     const fetchInformationSystems = async () => {
-      
       try {
-        const response = await fetchApi('InformationSystems/with-attributes')
-        
-    
+        const data = await fetchApi('InformationSystems/with-attributes');
+        setInformationSystems(data);
       } catch (error) {
         console.error('Ошибка при получении данных:', error);
         message.error('Ошибка при получении данных');
       }
     };
-
     fetchInformationSystems();
   }, []);
 
@@ -73,39 +70,21 @@ const InformationSystemsPage: React.FC = () => {
       message.warning('Выберите одну строку для редактирования.');
       return;
     }
-
     const selectedId = selectedRowKeys[0];
-
     const fetchInformationSystemDetails = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
       try {
-        const response = await fetch(`http://localhost:5295/api/InformationSystems/${selectedId}/details`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data: InformationSystemDetailsDto = await response.json();
-          setSelectedInfoSystem(data);
-          const formValues: { [key: string]: string } = {
-              name: data.name,
-          };
+        const data = await fetchApi(`InformationSystems/${selectedId}/details`); 
+        setSelectedInfoSystem(data);
+        const formValues: { [key: string]: string } = {
+            name: data.name,
+        };
           
-          data.attributes.forEach(attr => {
-              formValues[attr.name] = attr.value;
-          });
-          console.log(formValues);
-          form.setFieldsValue(formValues); 
-  
-          setModalMode('edit');
-          setIsModalVisible(true);
-        }  else {
-          console.error('Ошибка при изменении данных:', response.status);
-          message.error('Ошибка при изменении данных');
-        }
+        data.attributes.forEach((attr: AttributeWithValueDto) => {
+          formValues[attr.name] = attr.value;
+        });
+        form.setFieldsValue(formValues); 
+        setModalMode('edit');
+        setIsModalVisible(true);
     } catch (error){
         console.error('Ошибка при изменении данных:', error);
         message.error('Ошибка при изменении данных');
@@ -126,25 +105,16 @@ const InformationSystemsPage: React.FC = () => {
       return;
     }
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) return; 
-
       const deletePromises = selectedRowKeys.map(async (id) => {
-        const response = await fetch(`http://localhost:5295/api/InformationSystems/${id}`, {
+        const success = await fetchApi(`InformationSystems/${id}`, { 
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: {},
         });
-
-        if (!response.ok) {
-          throw new Error(`Ошибка при удалении ИС с ID ${id}: ${response.status}`);
+        if (!success) {
+          throw new Error(`Ошибка при удалении ИС с ID ${id}`);
         }
       });
-
       await Promise.all(deletePromises);
-
       message.success('Данные успешно удалены.');
       setSelectedRowKeys([]);
       const updatedInfoSystems = informationSystems.filter(is => !selectedRowKeys.includes(is.id));
@@ -161,7 +131,6 @@ const InformationSystemsPage: React.FC = () => {
       const values = await form.validateFields();
       let attributes: AttributeWithValueDto[] = [];
 
-
       if (modalMode === 'edit' && selectedInfoSystem) { 
         attributes = selectedInfoSystem.attributes.map((attribute) => ({
           id: attribute.id,
@@ -171,31 +140,28 @@ const InformationSystemsPage: React.FC = () => {
       } else if (modalMode === 'add') {
         attributes = newAttributes; 
       }
-      const url = modalMode === 'add'
-      ? 'http://localhost:5295/api/InformationSystems'
-      : `http://localhost:5295/api/InformationSystems/${selectedRowKeys[0]}/edit-with-attributes`;
+      const endpoint = modalMode === 'add'
+      ? 'InformationSystems'
+      : `InformationSystems/${selectedRowKeys[0]}/edit-with-attributes`;
       const method = modalMode === 'add' ? 'POST' : 'PUT';
 
-      const token = localStorage.getItem('token');
-      if (!token) return; 
-      
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ 
-          name: values.name, 
-          attributes: attributes 
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(`Ошибка при ${modalMode === 'add' ? 'добавлении' : 'обновлении'} ИС: ${response.status}`);
+      let result: InformationSystem | true | null = null; 
+      try {
+        result = await fetchApi(endpoint, {
+          method: method,
+          headers: {},
+          body: JSON.stringify({ 
+            name: values.name, 
+            attributes: attributes 
+          }),
+        });
+      } catch (error) {
+        
+        return;
       }
-      if (modalMode === 'add') {
-        const newInfoSystem = await response.json();
-        setInformationSystems([...informationSystems, newInfoSystem]);
+      if (result) {
+      if (modalMode === 'add' && typeof result !=='boolean') {
+        setInformationSystems([...informationSystems, result]);
       } else {
         const updatedInfoSystems = [...informationSystems];
         const index = updatedInfoSystems.findIndex(is => is.id === selectedRowKeys[0]);
@@ -204,12 +170,12 @@ const InformationSystemsPage: React.FC = () => {
           setInformationSystems(updatedInfoSystems);
         }
       }
-
       setIsModalVisible(false);
       form.resetFields();
       setSelectedRowKeys([]);
       setNewAttributes([]);
       message.success(modalMode === 'add' ? 'Данные успешно добавлены.' : 'Данные успешно обновлены.');
+    }
     } catch (error) {
       console.error(error);
       message.error(modalMode === 'add' ? 'Ошибка при добавлении данных.' : 'Ошибка при обновлении данных.');
@@ -336,21 +302,6 @@ return (
                 <Input />
                 </Form.Item>
               </Col>
-              {/* <Col span={4}>
-                <Form.Item
-                  label="ID атрибута (опционально)"
-                  name={['newAttributes', index, 'id']}
-                >
-                  <Select>
-                    <Option value={undefined}>Создать новый</Option>
-                    {newAttributes.map((attribute) => (
-                      <Option key={attribute.name} value={attribute.dataType}>
-                        {attribute.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col> */}
               <Col span={2}>
                 <Button type="danger" onClick={() => removeAttribute(index)}>
                   Удалить
