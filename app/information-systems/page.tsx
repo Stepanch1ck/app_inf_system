@@ -130,7 +130,6 @@ const InformationSystemsPage: React.FC = () => {
     try {
       const values = await form.validateFields();
       let attributes: AttributeWithValueDto[] = [];
-
       if (modalMode === 'edit' && selectedInfoSystem) { 
         attributes = selectedInfoSystem.attributes.map((attribute) => ({
           id: attribute.id,
@@ -140,28 +139,31 @@ const InformationSystemsPage: React.FC = () => {
       } else if (modalMode === 'add') {
         attributes = newAttributes; 
       }
-      const endpoint = modalMode === 'add'
-      ? 'InformationSystems'
-      : `InformationSystems/${selectedRowKeys[0]}/edit-with-attributes`;
+      const url = modalMode === 'add'
+      ? 'http://localhost:5295/api/InformationSystems'
+      : `http://localhost:5295/api/InformationSystems/${selectedRowKeys[0]}/edit-with-attributes`;
       const method = modalMode === 'add' ? 'POST' : 'PUT';
 
-      let result: InformationSystem | true | null = null; 
-      try {
-        result = await fetchApi(endpoint, {
-          method: method,
-          headers: {},
-          body: JSON.stringify({ 
-            name: values.name, 
-            attributes: attributes 
-          }),
-        });
-      } catch (error) {
-        
-        return;
+      const token = localStorage.getItem('token');
+      if (!token) return; 
+      
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          name: values.name, 
+          attributes: attributes 
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Ошибка при ${modalMode === 'add' ? 'добавлении' : 'обновлении'} ИС: ${response.status}`);
       }
-      if (result) {
-      if (modalMode === 'add' && typeof result !=='boolean') {
-        setInformationSystems([...informationSystems, result]);
+      if (modalMode === 'add') {
+        const newInfoSystem = await response.json();
+        setInformationSystems([...informationSystems, newInfoSystem]);
       } else {
         const updatedInfoSystems = [...informationSystems];
         const index = updatedInfoSystems.findIndex(is => is.id === selectedRowKeys[0]);
@@ -170,12 +172,12 @@ const InformationSystemsPage: React.FC = () => {
           setInformationSystems(updatedInfoSystems);
         }
       }
+
       setIsModalVisible(false);
       form.resetFields();
       setSelectedRowKeys([]);
       setNewAttributes([]);
       message.success(modalMode === 'add' ? 'Данные успешно добавлены.' : 'Данные успешно обновлены.');
-    }
     } catch (error) {
       console.error(error);
       message.error(modalMode === 'add' ? 'Ошибка при добавлении данных.' : 'Ошибка при обновлении данных.');
@@ -302,6 +304,21 @@ return (
                 <Input />
                 </Form.Item>
               </Col>
+              {/* <Col span={4}>
+                <Form.Item
+                  label="ID атрибута (опционально)"
+                  name={['newAttributes', index, 'id']}
+                >
+                  <Select>
+                    <Option value={undefined}>Создать новый</Option>
+                    {newAttributes.map((attribute) => (
+                      <Option key={attribute.name} value={attribute.dataType}>
+                        {attribute.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col> */}
               <Col span={2}>
                 <Button type="danger" onClick={() => removeAttribute(index)}>
                   Удалить
