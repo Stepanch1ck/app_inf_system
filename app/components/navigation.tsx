@@ -11,6 +11,8 @@ interface NavigationProps {
   onAdmin: () => void;
   userRoles: string[];
 }
+
+
 const Navigation: React.FC<NavigationProps> = ({ onEdit, onAdd, onDelete, onAdmin, userRoles }) => {
   const canEdit = userRoles.includes('admin') || userRoles.includes('editor');
   const canAdd = userRoles.includes('admin') || userRoles.includes('editor');

@@ -5,6 +5,8 @@ import type { ColumnsType } from 'antd/es/table';
 import Navigation from '../components/navigation';
 import router from 'next/router';
 import  Option  from 'antd/es/select';
+import fetchApi from '../utils/api';
+import useFetchUser from '../utils/useFetchUser';
 
 
 interface AttributeValue {
@@ -41,84 +43,18 @@ const AttributeValuesPage: React.FC = () => {
     const [form] = Form.useForm();
     
   
-    const [userRoles, setUserRoles] = useState<string[]>([]);
+    const userRoles = useFetchUser();
 
-
-    useEffect(() => {
-        const fetchUserData = async () => {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            router.push('/login');
-            return;
-          }
-    
-          try {
-            const response = await fetch('http://localhost:5295/api/users/me', {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-    
-            if (response.ok) {
-              const userData = await response.json();
-              setUserRoles([userData.role.name]);
-            } else {
-              console.error('Ошибка при получении данных пользователя:', response.status);
-              
-              message.error('Ошибка авторизации');
-              localStorage.removeItem('token');
-              router.push('/login');
-            }
-          } catch (error) {
-            console.error('Ошибка при получении данных пользователя:', error);
-            message.error('Ошибка при получении данных пользователя');
-          }
-        };
-    
-        fetchUserData();
-      }, []);
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return; 
-
       try {
-        const responseAttributeValues = await fetch('http://localhost:5295/api/AttributeValues', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (responseAttributeValues.ok) {
-          const data = await responseAttributeValues.json();
-          console.log("Состояние attributeValues:", attributeValues);
-          setAttributeValues(data);
-        } else {
-          console.error('Ошибка при получении данных:', responseAttributeValues.status);
-        }
-        const responseInformationSystems = await fetch('http://localhost:5295/api/InformationSystems', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          if (responseInformationSystems.ok) {
-            const data = await responseInformationSystems.json();
-            setInformationSystems(data);
-          } else {
-            console.error('Ошибка при получении данных информационных систем:', responseInformationSystems.status);
-          }
-          const responseAttributes = await fetch('http://localhost:5295/api/Attribute', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          if (responseAttributes.ok) {
-            const data = await responseAttributes.json();
-            setAttributes(data);
-          } else {
-            console.error('Ошибка при получении данных атрибутов:', responseAttributes.status);
-          }
+        const dataAttributesValues = await fetchApi('AttributeValues');
+        setAttributeValues(dataAttributesValues);
+        const dataInformationSystems = await fetchApi('InformationSystems');
+        setInformationSystems(dataInformationSystems);
+        const dataAttributes = await fetchApi('Attribute');
+        setAttributes(dataAttributes);
       } catch (error) {
         console.error('Ошибка при получении данных:', error);
       }

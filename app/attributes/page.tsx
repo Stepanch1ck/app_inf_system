@@ -6,6 +6,8 @@ import type { ColumnsType } from 'antd/es/table';
 import Navigation from '../components/navigation';
 import { useRouter } from 'next/navigation';
 import  Option  from 'antd/es/select';
+import fetchApi from '../utils/api';
+import useFetchUser from '../utils/useFetchUser';
 
 interface Attribute {
   id: number;
@@ -21,60 +23,14 @@ const AttributesPage: React.FC = () => {
     const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
     const [form] = Form.useForm();
   
-    const [userRoles, setUserRoles] = useState<string[]>([]);
+    const userRoles = useFetchUser();
 
-    useEffect(() => {
-      const fetchUserData = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/login'); 
-          return;
-        }
-  
-        try {
-          const response = await fetch('http://localhost:5295/api/users/me', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-  
-          if (response.ok) {
-            const userData = await response.json();
-            setUserRoles([userData.role.name]);
-          } else {
-            console.error('Ошибка при получении данных пользователя:', response.status);
-            message.error('Ошибка авторизации');
-            localStorage.removeItem('token');
-            router.push('/login');
-          }
-        } catch (error) {
-          console.error('Ошибка при получении данных пользователя:', error);
-          message.error('Ошибка при получении данных пользователя');
-        }
-      };
-  
-      fetchUserData();
-    }, []);
   
   useEffect(() => {
     const fetchAttributes = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return; 
-
       try {
-        const response = await fetch('http://localhost:5295/api/Attribute', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setAttributes(data);
-        } else {
-          console.error('Ошибка при получении данных:', response.status);
-          message.error('Ошибка при получении данных атрибутов.');
-        }
+        const data = await fetchApi('Attribute');
+        setAttributes(data);
       } catch (error) {
         console.error('Ошибка при получении данных:', error);
         message.error('Ошибка при получении данных атрибутов.');
@@ -88,7 +44,6 @@ const AttributesPage: React.FC = () => {
     if (selectedRowKeys.length != 1){
         message.warning('Выберите одну строку для редактирования.')
     }
-
     const selectedId = selectedRowKeys[0];
     const selectedAttribute = attributes.find(attr => attr.id === selectedId);
     if (selectedAttribute){

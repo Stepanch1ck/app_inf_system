@@ -1,8 +1,9 @@
 import { message } from 'antd';
+import router from 'next/router';
 
 
 interface FetchOptions {
-  headers: HeadersInit | undefined;
+  headers?: HeadersInit | undefined;
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: any;
 }
@@ -16,6 +17,7 @@ const fetchApi = async (endpoint: string, options: FetchOptions = {
   const token = localStorage.getItem('token');
   if (!token) {
     message.error('Ошибка авторизации. Пожалуйста, войдите.');
+    router.push('/login'); 
     return null;
   }
 

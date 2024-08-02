@@ -7,6 +7,7 @@ import Navigation from '../components/navigation';
 import Option from 'antd/es/select'
 import router from 'next/router';
 import fetchApi from '../utils/api'; 
+import useFetchUser from '../utils/useFetchUser';
 
 interface AttributeWithValueDto {
   id: number;
@@ -35,22 +36,7 @@ const InformationSystemsPage: React.FC = () => {
   const [selectedInfoSystem, setSelectedInfoSystem] = useState<InformationSystemDetailsDto | null>(null);
   const [newAttributes, setNewAttributes] = useState<AttributeWithValueDto[]>([]);
   
-  const [userRoles, setUserRoles] = useState<string[]>([]);
-  
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userData = await fetchApi('users/me');
-        setUserRoles([userData.role.name]);
-      } catch (error) {
-        console.error('Ошибка при получении данных пользователя:', error);
-        message.error('Ошибка при получении данных пользователя');
-      }
-    };
-
-    fetchUserData();
-  }, []);
+  const userRoles = useFetchUser();
 
   useEffect(() => {
     const fetchInformationSystems = async () => {
@@ -78,7 +64,6 @@ const InformationSystemsPage: React.FC = () => {
         const formValues: { [key: string]: string } = {
             name: data.name,
         };
-          
         data.attributes.forEach((attr: AttributeWithValueDto) => {
           formValues[attr.name] = attr.value;
         });

@@ -6,6 +6,8 @@ import type { ColumnsType } from 'antd/es/table';
 import Navigation from '../components/navigation';
 import router from 'next/router';
 import Option from 'antd/es/select';
+import fetchApi from '../utils/api';
+import useFetchUser from '../utils/useFetchUser';
 
 interface User {
   id: number;
@@ -23,71 +25,21 @@ const AdminPage: React.FC = () => {
   const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
   const [form] = Form.useForm();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const userRoles = useFetchUser();
   const [isCreateUserModalVisible, setIsCreateUserModalVisible] = useState(false);
   const [createUserForm] = Form.useForm();
 
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:5295/api/users/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          setUserRoles([userData.role.name]);
-        } else {
-          console.error('Ошибка при получении данных пользователя:', response.status);
-          message.error('Ошибка авторизации');
-          localStorage.removeItem('token');
-          router.push('/login');
-        }
-      } catch (error) {
-        console.error('Ошибка при получении данных пользователя:', error);
-        message.error('Ошибка при получении данных пользователя');
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
   useEffect(() => {
     const fetchUsers = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
       try {
-        const response = await fetch('http://localhost:5295/api/Users', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setUsers(data);
-        } else {
-          console.error('Ошибка при получении данных:', response.status);
-          message.error('Ошибка при получении данных пользователей.');
-        }
+        const data = await fetchApi('Users');
+        setUsers(data);
       } catch (error) {
         console.error('Ошибка при получении данных:', error);
         message.error('Ошибка при получении данных пользователей.');
       }
     };
-    
     fetchUsers();
-
   }, []);
 
   const handleEdit = () => {
