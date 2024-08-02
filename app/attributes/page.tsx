@@ -69,19 +69,14 @@ const AttributesPage: React.FC = () => {
     }
 
     try{
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
         const deletePromises =selectedRowKeys.map(async (id) => {
             const response = await
-            fetch(`http://localhost:5295/api/Attribute/${id}`, {
+            fetchApi(`Attribute/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: {},
             });
 
-            if (!response.ok) {
+            if (!response) {
                 throw new Error(`Ошибка при удалении атрибута с ID ${id}: ${response.status}`);
             }
         });
@@ -229,7 +224,7 @@ const AttributesPage: React.FC = () => {
 
       <Modal
         title={modalMode === 'add' ? 'Добавить атрибут' : 'Редактировать атрибут'}
-        visible={isModalVisible}
+        open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
       >

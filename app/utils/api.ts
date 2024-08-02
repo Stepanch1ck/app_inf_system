@@ -3,7 +3,7 @@ import router from 'next/router';
 
 
 interface FetchOptions {
-  headers?: HeadersInit | undefined;
+  headers: HeadersInit | undefined;
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: any;
 }

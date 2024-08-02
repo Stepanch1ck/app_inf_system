@@ -26,8 +26,7 @@ const AdminPage: React.FC = () => {
   const [form] = Form.useForm();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const userRoles = useFetchUser();
-  const [isCreateUserModalVisible, setIsCreateUserModalVisible] = useState(false);
-  const [createUserForm] = Form.useForm();
+
 
   useEffect(() => {
     const fetchUsers = async () => {

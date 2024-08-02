@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { message } from 'antd';
-import router from 'next/router';
 import fetchApi from './api';
+import { redirect } from 'next/navigation';
 
 interface User {
   role: {
@@ -20,7 +20,7 @@ const useFetchUser = () => {
       } catch (error) {
         console.error('Ошибка при получении данных пользователя:', error);
         message.error('Ошибка при получении данных пользователя');
-        router.push('/login'); 
+        redirect('/login'); 
       }
     };
 

@@ -93,20 +93,13 @@ const AttributeValuesPage: React.FC = () => {
       message.warning('Выберите строки для удаления.');
       return;
     }
-
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
       const deletePromises = selectedRowKeys.map(async (id) => {
-        const response = await fetch(`http://localhost:5295/api/AttributeValues/${id}`, {
+        const response = await fetchApi(`AttributeValues/${id}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: {},
         });
-
-        if (!response.ok) {
+        if (!response) {
           throw new Error(`Ошибка при удалении значения атрибута с ID ${id}: ${response.status}`);
         }
       });
@@ -115,7 +108,7 @@ const AttributeValuesPage: React.FC = () => {
 
       message.success('Данные успешно удалены.');
       setSelectedRowKeys([]);
-      const updatedAttributeValues = attributeValues.filter(av => !selectedRowKeys.includes(av.id.toString()));
+      const updatedAttributeValues = attributeValues.filter(av => !selectedRowKeys.includes(av.id));
       setAttributeValues(updatedAttributeValues);
     } catch (error) {
       console.error('Ошибка при удалении данных:', error);
@@ -275,7 +268,7 @@ const AttributeValuesPage: React.FC = () => {
 
       <Modal
         title={modalMode === 'add' ? 'Добавить значение атрибута' : 'Редактировать значение атрибута'}
-        visible={isModalVisible}
+        open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
       >
