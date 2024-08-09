@@ -61,12 +61,6 @@ const LoginPage: React.FC = () => {
           </Button>
         </Form.Item>
 
-        <Form.Item>
-          <Link href="/information-systems"> 
-            Просмотреть данные
-          </Link>
-        </Form.Item>
-
       </Form>
     </div>
   );

@@ -7,6 +7,7 @@ import router from 'next/router';
 import  Option  from 'antd/es/select';
 import fetchApi from '../utils/api';
 import useFetchUser from '../utils/useFetchUser';
+import { getAllInfSystem } from '../services/InformationSystem';
 
 
 interface AttributeValue {
@@ -51,7 +52,7 @@ const AttributeValuesPage: React.FC = () => {
       try {
         const dataAttributesValues = await fetchApi('AttributeValues');
         setAttributeValues(dataAttributesValues);
-        const dataInformationSystems = await fetchApi('InformationSystems');
+        const dataInformationSystems = await getAllInfSystem();
         setInformationSystems(dataInformationSystems);
         const dataAttributes = await fetchApi('Attribute');
         setAttributes(dataAttributes);

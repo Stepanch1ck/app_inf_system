@@ -6,17 +6,9 @@ import type { ColumnsType } from 'antd/es/table';
 import Navigation from '../components/navigation';
 import router from 'next/router';
 import Option from 'antd/es/select';
-import fetchApi from '../utils/api';
 import useFetchUser from '../utils/useFetchUser';
-
-interface User {
-  id: number;
-  username: string;
-  role: {
-    id: number;
-    name: string;
-  };
-}
+import { createUser, deleteUser, getAllUsers, updateUser, UserRequest } from '../services/admin';
+import SearchAndFilter from '../components/serach&filter';
 
 const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -26,18 +18,15 @@ const AdminPage: React.FC = () => {
   const [form] = Form.useForm();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const userRoles = useFetchUser();
+  const [originalData, setOriginalData] = useState<User[]>([]);
+  const [filteredData, setFilteredData] = useState<User[]>([]); 
+  const [searchText, setSearchText] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
 
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await fetchApi('Users');
-        setUsers(data);
-      } catch (error) {
-        console.error('Ошибка при получении данных:', error);
-        message.error('Ошибка при получении данных пользователей.');
-      }
-    };
+    
     fetchUsers();
   }, []);
 
@@ -61,6 +50,22 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const data = await getAllUsers();
+      const processedUsers = data.map((user: User) => ({
+        ...user,
+        role: user.role.name,  
+      }));
+      setUsers(processedUsers);
+      setOriginalData(processedUsers);
+      setFilteredData(processedUsers); 
+    } catch (error) {
+      console.error('Ошибка при получении данных:', error);
+      message.error('Ошибка при получении данных пользователей.');
+    }
+  };
+
   const handleAdd = () => {
     form.resetFields();
     setModalMode('add');
@@ -72,30 +77,17 @@ const AdminPage: React.FC = () => {
         message.warning('Выберите строки для удаления.');
         return;
       }
-    
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-    
         const deletePromises = selectedRowKeys.map(async (id) => {
-          const response = await fetch(`http://localhost:5295/api/Users/${id}`, {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-    
-          if (!response.ok) {
-            throw new Error(`Ошибка при удалении пользователя с ID ${id}: ${response.status}`);
-          }
+          await deleteUser(id.toString());
+          
         });
-    
         await Promise.all(deletePromises);
-    
         message.success('Пользователи успешно удалены.');
         setSelectedRowKeys([]);
-        const updatedUsers = users.filter(user => !selectedRowKeys.includes(user.id));
-        setUsers(updatedUsers);
+        await fetchUsers();
       } catch (error) {
         console.error('Ошибка при удалении данных:', error);
         message.error('Ошибка при удалении данных.');
@@ -108,57 +100,31 @@ const AdminPage: React.FC = () => {
       const selectedId = selectedRowKeys[0];
 
       if (modalMode === 'add') {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        const response = await fetch('http://localhost:5295/api/Users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(values),
-        });
-
-        if (response.ok) {
-          const newUser = await response.json();
-          setUsers([...users, newUser]);
-        } else {
-          throw new Error(`Ошибка при добавлении пользователя: ${response.status}`);
-        }
+        const newUserRequest: UserRequest = {
+          id: 0,
+          name: values.username,
+          password: values.password,
+          roleid: values.roleId,
+        };
+        await createUser(newUserRequest);
       } else {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        const response = await fetch(`http://localhost:5295/api/Users/${selectedId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            id: selectedId,
-            username: values.username,
-            roleId: values.roleId,
-          }),
-        });
-
-        if (response.ok) {
-          const updatedUsers = [...users];
-          const index = updatedUsers.findIndex(user => user.id === selectedId);
-          if (index !== -1) {
-            updatedUsers[index] = { ...updatedUsers[index], username: values.username, role: { ...updatedUsers[index].role, id: values.roleId } };
-            setUsers(updatedUsers);
-          }
-        } else {
-          throw new Error(`Ошибка при обновлении пользователя: ${response.status}`);
+        const updatedUserRequest: UserRequest = {
+          id: Number(selectedId),
+          name: values.username,
+          roleid: values.roleId,
+        };
+  
+        if (values.password) { 
+          updatedUserRequest.password = values.password; 
         }
+  
+        await updateUser(selectedId.toString(), updatedUserRequest);
       }
 
       setIsModalVisible(false);
       form.resetFields();
       setSelectedRowKeys([]);
-
+      await fetchUsers();
       message.success(modalMode === 'add' ? 'Пользователь успешно добавлен.' : 'Пользователь успешно обновлен.');
     } catch (error) {
       console.error(error);
@@ -180,6 +146,76 @@ const AdminPage: React.FC = () => {
     onChange: onSelectChange,
   };
 
+  const handleFilter = (filteredData: User[]) => {
+    setFilteredData(filteredData);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchText(value.toLowerCase());
+    filterData();
+  };
+
+  const handleFilterChange = (value: string | null) => {
+    setSelectedFilter(value);
+    filterData();
+  };
+
+  const handleSort = () => {
+    setSortDirection(prevDirection => {
+      if (prevDirection === 'asc') {
+        return 'desc';
+      } else if (prevDirection === 'desc') {
+        return null;
+      } else {
+        return 'asc';
+      }
+    });
+    filterData();
+  };
+
+  const filterData = () => {
+    let filteredData = [...originalData];
+
+    if (searchText) {
+      filteredData = filteredData.filter(user =>
+        user.username.toLowerCase().includes(searchText) ||
+        user.role.name.toLowerCase().includes(searchText) 
+      );
+    }
+
+    if (selectedFilter) {
+      filteredData = filteredData.filter(user => user.roleid === parseInt(selectedFilter, 10));
+    }
+
+    if (sortDirection) {
+      filteredData.sort((a, b) => {
+        const aValue = sortDirection === 'asc' ? a.username.toLowerCase() : b.username.toLowerCase();
+        const bValue = sortDirection === 'asc' ? b.username.toLowerCase() : a.username.toLowerCase();
+        return aValue.localeCompare(bValue); 
+      });
+    }
+    setFilteredData(filteredData);
+  };
+
+  const filterOptions = [
+    {
+      label: 'Администратор',
+      value: '1',
+      filterFn: (user: User, value: string) => user.roleid === parseInt(value, 10)
+    },
+    {
+      label: 'Редактор',
+      value: '2',
+      filterFn: (user: User, value: string) => user.roleid === parseInt(value, 10)
+    },
+    {
+      label: 'Просмотр',
+      value: '3',
+      filterFn: (user: User, value: string) => user.roleid === parseInt(value, 10)
+    },
+  ];
+
+
   const columns: ColumnsType<User> = [
     {
       title: 'ID',
@@ -193,14 +229,19 @@ const AdminPage: React.FC = () => {
     },
     {
       title: 'Роль',
-      dataIndex: 'role.name',
-      key: 'role.name',
+      dataIndex: 'role',
+      key: 'role',
     },
   ];
 
   const handleAdmin = () => {
     router.push('/admin'); 
   };
+  const options = [
+    { value: 1, label: 'Администратор' },
+    { value: 2, label: 'Редактор' },
+    { value: 3, label: 'Просмотр' },
+  ];
 
 
   return (
@@ -213,8 +254,16 @@ const AdminPage: React.FC = () => {
         userRoles={userRoles}
         
       />
+
+      <SearchAndFilter
+        data={originalData}
+        onFilter={handleFilter}
+        onSearch={handleSearch}
+        filterOptions={filterOptions}
+      />
+
       <h1>Пользователи</h1>
-      <Table columns={columns} dataSource={users} 
+      <Table columns={columns} dataSource={filteredData} 
       onRow={(record: { id: React.Key; }, rowIndex: any) => {
         return {
           onClick: () => {
@@ -223,7 +272,7 @@ const AdminPage: React.FC = () => {
         };
       }}
         />
-
+      
       {/* Modal для добавления пользователя */}
       <Modal
         title={modalMode === 'add' ? 'Добавить пользователя' : 'Редактировать пользователя'}
@@ -247,11 +296,7 @@ const AdminPage: React.FC = () => {
             <Input.Password />
           </Form.Item>
           <Form.Item label="Роль" name="roleId" rules={[{ required: true, message: 'Выберите роль!' }]} >
-            <Select>
-              <Option value={1}>Администратор</Option>
-              <Option value={2}>Редактор</Option>
-              <Option value={3}>Просмотр</Option>
-            </Select>
+          <Select options={options} defaultValue="Просмотр" />
           </Form.Item>
         </Form>
       </Modal>

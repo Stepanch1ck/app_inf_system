@@ -8,12 +8,9 @@ import { useRouter } from 'next/navigation';
 import  Option  from 'antd/es/select';
 import fetchApi from '../utils/api';
 import useFetchUser from '../utils/useFetchUser';
+import { AttributeWithTypeRequest, createAttribute, deleteAttribute, updateAttribute } from '../services/attribute';
+import SearchAndFilter from '../components/serach&filter';
 
-interface Attribute {
-  id: number;
-  name: string;
-  dataType: string;
-}
 
 const AttributesPage: React.FC = () => {
     const router = useRouter();
@@ -22,22 +19,17 @@ const AttributesPage: React.FC = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
     const [form] = Form.useForm();
-  
     const userRoles = useFetchUser();
+    const [originalData, setOriginalData] = useState<Attribute[]>([]);
+    const [filteredData, setFilteredData] = useState<Attribute[]>([]);
+    const [searchText, setSearchText] = useState('');
+    const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
   
   useEffect(() => {
-    const fetchAttributes = async () => {
-      try {
-        const data = await fetchApi('Attribute');
-        setAttributes(data);
-      } catch (error) {
-        console.error('Ошибка при получении данных:', error);
-        message.error('Ошибка при получении данных атрибутов.');
-      }
-    };
-
     fetchAttributes();
+    const intervalId = setInterval(fetchAttributes, 30000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleEdit = () => {
@@ -67,27 +59,17 @@ const AttributesPage: React.FC = () => {
         message.warning('Выберите строки для удаления.')
         return;
     }
-
     try{
         const deletePromises =selectedRowKeys.map(async (id) => {
-            const response = await
-            fetchApi(`Attribute/${id}`, {
-                method: 'DELETE',
-                headers: {},
-            });
-
+            const response = await deleteAttribute(id.toString());
             if (!response) {
-                throw new Error(`Ошибка при удалении атрибута с ID ${id}: ${response.status}`);
+                throw new Error(`Ошибка при удалении атрибута с ID: ${id}`);
             }
         });
-
         await Promise.all(deletePromises);
-
         message.success('Данные успешно удалены.');
         setSelectedRowKeys([]);
-
-        const UpdatedAttributes = attributes.filter(attr => !selectedRowKeys.includes(attr.id));
-        setAttributes(UpdatedAttributes);
+        await fetchAttributes()
     } catch (error) {
         console.error('Ошибка при удалении данных:', error);
         message.error('Ошибка при удалении данных.');
@@ -101,70 +83,42 @@ const AttributesPage: React.FC = () => {
 
         if (modalMode === 'add') {
             if (!token) return;
-            
-
-            const response = await fetch('http://localhost:5295/api/Attribute', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    name: values.name,
-                    dataType: values.dataType
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Ошибка при добавлении атрибута: ${response.status}`);
-            }
-
-            const newAttribute = await response.json();
-            setAttributes([...attributes, newAttribute]);
+            const newAttr : AttributeWithTypeRequest = {
+              id: 0,
+              name: values.name,
+              dataType: values.dataType
+            };
+            await createAttribute(newAttr);
         } else {
-            const selectedId = selectedRowKeys[0];
-            
+            const selectedId = Number(selectedRowKeys[0]);
             if (!token) return;
-            console.log(JSON.stringify({ id: selectedId, name: values.name, dataType: values.dataType }));
-            const response = await fetch(`http://localhost:5295/api/Attribute/${selectedId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    id: selectedId,
-                    name: values.name,
-                    dataType: values.dataType,
-                }),
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Ошибка при обновлении атрибута с ID ${selectedId}: ${response.status}`);
-            }
-
-            const updatedAttributes = [...attributes];
-            const index = updatedAttributes.findIndex(attr => attr.id === selectedId);
-            if (index != -1) {
-                updatedAttributes[index] = {
-                    ...updatedAttributes[index],
-                    name: values.name,
-                    dataType: values.dataType
-                };
-                setAttributes(updatedAttributes);
-            }
+              const updatedAttr: AttributeWithTypeRequest = {
+                id: selectedId,
+                name: values.name,
+                dataType: values.dataType,
+              };
         }
-
+        await fetchAttributes()
         setIsModalVisible(false);
         form.resetFields();
         setSelectedRowKeys([]);
-
         message.success(modalMode === 'add' ? 'Данные успешно добавлены.' : 'Данные успешно обновлены.');
     } catch (error) {
         console.error(modalMode === 'add' ? 'Ошибка при подключении данных.': 'Ошибка при обновлении данных.')
     }
   };
-  
+
+  const fetchAttributes = async () => {
+    try {
+      const data = await fetchApi('Attribute');
+      setAttributes(data);
+      setOriginalData(data);
+      setFilteredData(data);
+    } catch (error) {
+      console.error('Ошибка при получении данных:', error);
+      message.error('Ошибка при получении данных атрибутов.');
+    }
+  }; 
 
   const handleModalCancel = () => {
     setIsModalVisible(false);
@@ -182,6 +136,34 @@ const AttributesPage: React.FC = () => {
   const handleAdmin = () => {
     router.push('/admin'); 
   };
+
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    filterData();
+  };
+  const handleFilter = (filteredData: Attribute[]) => {
+    setFilteredData(filteredData);
+  };
+
+  const handleFilterChange = (value: string | null) => {
+    setSelectedFilter(value);
+    filterData();
+  };
+
+  const filterData = () => {
+    let filteredData = [...originalData];
+
+    if (searchText) {
+      filteredData = filteredData.filter(item =>
+        item.name.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    setFilteredData(filteredData);
+  };
+  const filterOptions: { label: string; value: string; filterFn: (item: Attribute, value: string) => boolean }[] = [
+    
+  ];
 
   const columns: ColumnsType<Attribute> = [
     {
@@ -212,7 +194,13 @@ const AttributesPage: React.FC = () => {
            
         />
       <h1>Атрибуты</h1>
-      <Table columns={columns} dataSource={attributes.length > 0 ? attributes : []} 
+      <SearchAndFilter
+        data={originalData}
+        onFilter={handleFilter}
+        onSearch={handleSearch}
+        filterOptions={filterOptions}
+      />
+      <Table columns={columns} dataSource={filteredData} 
         onRow={(record: { id: React.Key; }, rowIndex: any) => {
           return {
             onClick: () => {
