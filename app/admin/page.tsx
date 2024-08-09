@@ -9,6 +9,7 @@ import Option from 'antd/es/select';
 import useFetchUser from '../utils/useFetchUser';
 import { createUser, deleteUser, getAllUsers, updateUser, UserRequest } from '../services/admin';
 import SearchAndFilter from '../components/serach&filter';
+import Password from 'antd/es/input/Password';
 
 const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -43,6 +44,7 @@ const AdminPage: React.FC = () => {
       setSelectedUser(selectedUser);
       form.setFieldsValue({
         username: selectedUser.username,
+        password: '',
         roleId: selectedUser.role.id,
       });
       setModalMode('edit');
@@ -102,16 +104,16 @@ const AdminPage: React.FC = () => {
       if (modalMode === 'add') {
         const newUserRequest: UserRequest = {
           id: 0,
-          name: values.username,
+          username: values.username,
           password: values.password,
-          roleid: values.roleId,
+          roleId: values.roleId,
         };
         await createUser(newUserRequest);
       } else {
         const updatedUserRequest: UserRequest = {
           id: Number(selectedId),
-          name: values.username,
-          roleid: values.roleId,
+          username: values.username,
+          roleId: values.roleId,
         };
   
         if (values.password) { 

@@ -2,9 +2,9 @@ import fetchApi from "../utils/api";
 
 export interface UserRequest {
     id: number;
-    name: string;
+    username: string;
     password?: string;
-    roleid: number;
+    roleId: number;
 }
 
 
@@ -37,7 +37,7 @@ export const updateUser = async(id: string, usrRequets : UserRequest) => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({usrRequets}),
+        body: JSON.stringify(usrRequets),
       });
 }
 
