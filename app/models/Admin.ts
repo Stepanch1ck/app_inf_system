@@ -1,9 +1,5 @@
 interface User {
-    id: number;
+    id: string;
     username: string;
-    role: {
-      id: number;
-      name: string;
-    };
-    roleid: number;
+    role: string;
 }

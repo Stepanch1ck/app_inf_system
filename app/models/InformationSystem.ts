@@ -1,13 +1,14 @@
-interface InformationSystem {
-    
-    id: number;
-    name: string;
-    attributes: AttributeWithValue[];
 
-}
-
-interface InformationSystemDetailsDto {
-    id: number;
+interface CreateInfSystemRequest {
     name: string;
-    attributes: AttributeWithValue[];
+    description: string;
+    attributeKeys: string[];
+    attributeValues: string[];
+  }
+  interface InformationSystem {
+    id: string;
+    name: string;
+    description: string;
+    attributeKeys: string[];
+    attributeValues: string[];
   }

@@ -8,18 +8,19 @@ import Option from 'antd/es/select'
 import router from 'next/router';
 import fetchApi from '../utils/api'; 
 import useFetchUser from '../utils/useFetchUser';
-import { createInfSystem, deleteInfSystem, getAllInfSystem, getInfSystem, InformationSystemRequest, updateInfSystem } from '../services/InformationSystem';
+import { ChangeAttributesRequest, createInfSystem, deleteInfSystem, getAllInfSystem, getInfSystemByAttributeContain, updateInfSystem } from '../services/InformationSystem';
 import SearchAndFilter from '../components/serach&filter';
+import { getAllAttribute } from '../services/attribute';
 
 const InformationSystemsPage: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
   const [form] = Form.useForm();
-  const [selectedInfoSystem, setSelectedInfoSystem] = useState<InformationSystemDetailsDto | null>(null);
-  const [newAttributes, setNewAttributes] = useState<AttributeWithValue[]>([]);
+  const [selectedAttributeKeys, setSelectedAttributeKeys] = useState<string[]>([]);
+  const [attributeValues, setAttributeValues] = useState<{ [key: string]: string }>({});
+  const [selectedInfoSystem, setSelectedInfoSystem] = useState<InformationSystem | null>(null);
   const [existingAttributes, setExistingAttributes] = useState<Attribute[]>([]);
-  const [deletedAttributeIds, setDeletedAttributeIds] = useState<number[]>([]);
   const [originalData, setOriginalData] = useState<InformationSystem[]>([]);
   const [filteredData, setFilteredData] = useState<InformationSystem[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -42,18 +43,22 @@ const InformationSystemsPage: React.FC = () => {
     const selectedId = selectedRowKeys[0];
     const fetchInformationSystemDetails = async () => {
       try {
-        const data = await getInfSystem(selectedId.toString());
-        setSelectedInfoSystem(data);
-        const formValues: { [key: string]: string } = {
-            name: data.name,
-        };
-        data.attributes.forEach((attr: AttributeWithValue) => {
-          formValues[attr.name] = attr.value;
-        });
-        form.setFieldsValue(formValues); 
-        setModalMode('edit');
-        setIsModalVisible(true);
-        await fetchData();
+        const data = await getAllInfSystem();
+        const selectedIS = data.find((iS: InformationSystem) => iS.id === selectedId);
+
+        if (selectedIS) {
+          setSelectedInfoSystem(selectedIS);
+          const formValues = {
+            name: selectedIS.name,
+            description: selectedIS.description,
+            attributeKeys: selectedIS.attributeKeys,
+            attributeValues: selectedIS.attributeValues,
+          };
+          form.setFieldsValue(formValues);
+          setModalMode('edit');
+          setIsModalVisible(true);
+          await fetchData();
+        }
     } catch (error){
         console.error('Ошибка при изменении данных:', error);
         message.error('Ошибка при изменении данных');
@@ -75,10 +80,7 @@ const InformationSystemsPage: React.FC = () => {
     }
     try {
       const deletePromises = selectedRowKeys.map(async (id) => {
-        const success = await deleteInfSystem(id.toString());
-        if (!success) {
-          throw new Error(`Ошибка при удалении ИС с ID ${id}`);
-        }
+        await deleteInfSystem(id.toString());
       });
       await Promise.all(deletePromises);
       message.success('Данные успешно удалены.');
@@ -94,65 +96,33 @@ const InformationSystemsPage: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      let attributes: AttributeWithValue[] = [];
-      if (selectedInfoSystem) {
-        selectedInfoSystem.attributes.forEach((attribute) => {
-          if (!deletedAttributeIds.includes(attribute.id)) {
-            attributes.push({
-              id: attribute.id,
-              name: attribute.name,
-              value: values[attribute.name], 
-            });
-          }
-        })
-    
       if (modalMode === 'edit') {
-        if (values.newExistingAttributes) {
-          values.newExistingAttributes.forEach((attribute: { attributeId: any; value: any; }) => {
-            const attributeId = attribute.attributeId;
-            const attributeName = existingAttributes.find(attr => attr.id === attributeId)?.name || '';
-            const attributeValue = attribute.value;
-  
-            if (!attributes.some(attr => attr.name === attributeName)) {
-              attributes.push({
-                id: attributeId,
-                name: attributeName,
-                value: attributeValue,
-              });
-            }
-          });
-        }
-      }
-      await updateInfSystem(selectedRowKeys[0].toString(), selectedInfoSystem);
-      } else if (modalMode === 'add') {
-        if (values.newExistingAttributes) {
-          values.newExistingAttributes.forEach((attribute: { attributeId: any; value: any; }) => {
-            const attributeId = attribute.attributeId;
-            const attributeName = existingAttributes.find(attr => attr.id === attributeId)?.name || '';
-            const attributeValue = attribute.value;
-  
-
-            if (!attributes.some((attr) => attr.name === attributeName)) {
-              attributes.push({
-                id: attributeId,
-                name: attributeName,
-                value: attributeValue,
-              });
-            }
-          });
-        }
-        const newInfoSystem: InformationSystemRequest = {
-          id: 0,
+        const updatedInfoSystem: InformationSystem = {
+          ...selectedInfoSystem!,
           name: values.name,
-          attributes: attributes,
+          description: values.description || '',
+          attributeKeys: values.attributeKeys,
+          attributeValues: values.attributeValues.map((key: string) => attributeValues[key] || '')
+        };
+        const updateRequest: ChangeAttributesRequest = {
+          name: updatedInfoSystem.name,
+          attrNames: updatedInfoSystem.attributeKeys,
+          attrValues: updatedInfoSystem.attributeValues,
+        };
+        await updateInfSystem(updateRequest);
+      } else if (modalMode === 'add') {
+        const newInfoSystem: CreateInfSystemRequest = {
+          name: values.name,
+          description: values.description,
+          attributeKeys: values.attributeKeys,
+          attributeValues: values.attributeValues,
         };
         await createInfSystem(newInfoSystem);
       }
+
       setIsModalVisible(false);
       form.resetFields();
       setSelectedRowKeys([]);
-      setNewAttributes([]);
-      setDeletedAttributeIds([]);
       await fetchData();
       message.success(modalMode === 'add' ? 'Данные успешно добавлены.' : 'Данные успешно обновлены.');
     } catch (error) {
@@ -161,13 +131,16 @@ const InformationSystemsPage: React.FC = () => {
     }
   };
 
+  
+
   const fetchData = async () => {
     try {
       const dataIS = await getAllInfSystem();
       setOriginalData(dataIS);
       setFilteredData(dataIS);
-    
-      const dataAttributes = await fetchApi('Attribute');
+
+      const dataAttributes = await getAllAttribute();
+      console.log("Attributes fetched:", dataAttributes);
       setExistingAttributes(dataAttributes);
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
@@ -175,19 +148,29 @@ const InformationSystemsPage: React.FC = () => {
     }
   };
   
-  const handleDeleteAttribute = (attributeId: number) => {
-    setDeletedAttributeIds([...deletedAttributeIds, attributeId]);
-    if (selectedInfoSystem) {
-      setSelectedInfoSystem({
-        ...selectedInfoSystem,
-        attributes: selectedInfoSystem.attributes.filter(attr => attr.id !== attributeId)
-      });
-    }
+  const handleDeleteAttributeKey = (index: number) => {
+    const updatedKeys = [...selectedAttributeKeys];
+    const deletedKey = updatedKeys.splice(index, 1)[0];
+    setSelectedAttributeKeys(updatedKeys);
+  
+    const updatedValues = { ...attributeValues };
+    delete updatedValues[deletedKey];
+    setAttributeValues(updatedValues);
   };
   const handleModalCancel = () => {
     setIsModalVisible(false);
     form.resetFields();
-    setNewAttributes([]);
+  };
+
+  const handleAttributeKeyChange = (value: string[]) => {
+    setSelectedAttributeKeys(value);
+  };
+
+  const handleAttributeValueChange = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    setAttributeValues({
+      ...attributeValues,
+      [key]: e.target.value,
+    });
   };
 
   const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
@@ -199,28 +182,28 @@ const InformationSystemsPage: React.FC = () => {
     onChange: onSelectChange,
   };
 
-  const addAttribute = () => {
-    setNewAttributes([...newAttributes, { id: 0, name: '', value: '' }]);
-  };
-  const removeAttribute = (index: number) => {
-    if (modalMode === 'add') {
-      setNewAttributes(newAttributes.filter((_, i) => i !== index));
-    } else if (modalMode === 'edit' && selectedInfoSystem) {
-      const updatedAttributes = selectedInfoSystem.attributes.filter((_, i) => i !== index);
-      setSelectedInfoSystem({
-        ...selectedInfoSystem,
-        attributes: updatedAttributes,
-      });
-      form.setFieldsValue({ ...form.getFieldsValue(), [selectedInfoSystem.attributes[index].name]: undefined }); // Удаляем значение из формы
-    }
-  };
+  // const addAttribute = () => {
+  //   setNewAttributes([...newAttributes, { id: 0, name: '', value: '' }]);
+  // };
+  // const removeAttribute = (index: number) => {
+  //   if (modalMode === 'add') {
+  //     setNewAttributes(newAttributes.filter((_, i) => i !== index));
+  //   } else if (modalMode === 'edit' && selectedInfoSystem) {
+  //     const updatedAttributes = selectedInfoSystem.attributes.filter((_, i) => i !== index);
+  //     setSelectedInfoSystem({
+  //       ...selectedInfoSystem,
+  //       attributes: updatedAttributes,
+  //     });
+  //     form.setFieldsValue({ ...form.getFieldsValue(), [selectedInfoSystem.attributes[index].name]: undefined }); // Удаляем значение из формы
+  //   }
+  // };
 
   const handleFilter = (filteredData: InformationSystem[]) => {
     setFilteredData(filteredData);
   };
 
   const handleSearch = (value: string) => {
-    setSearchText(value.toLowerCase()); // Приводим к нижнему регистру для регистронезависимого поиска
+    setSearchText(value.toLowerCase());
     filterData();
   };
 
@@ -228,7 +211,8 @@ const InformationSystemsPage: React.FC = () => {
     ...existingAttributes.map(attribute => ({
       label: `По атрибуту "${attribute.name}"`,
       value: attribute.name,
-      filterFn: (item: InformationSystem, value: string) => item.attributes.some(attr => attr.name === value),
+      filterFn: (item: InformationSystem, value: string) =>
+        item.attributeKeys.includes(value),
     })),
   ];
   
@@ -243,13 +227,11 @@ const InformationSystemsPage: React.FC = () => {
     if (searchText) {
       filteredData = filteredData.filter(item => {
         return (
-          item.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.attributes.some(attr => attr.name.toLowerCase().includes(searchText.toLowerCase())) ||
-          item.attributes.some(attr => attr.value.toLowerCase().includes(searchText.toLowerCase()))
+          item.name.toLowerCase().includes(searchText) ||
+          item.attributeKeys.some(key => key.toLowerCase().includes(searchText)) ||
+          item.attributeValues.some(value => value.toLowerCase().includes(searchText))
         );
       });
-    } else {
-      filteredData = [...originalData];
     }
 
     if (selectedFilter) {
@@ -281,12 +263,12 @@ const InformationSystemsPage: React.FC = () => {
       title: 'Атрибуты',
       dataIndex: 'attributes',
       key: 'attributes',
-      render: (attributes: AttributeWithValue[] | undefined) => (
-        attributes && attributes.length > 0 ? (
+      render: (attributeKeys: string[], record: InformationSystem) => (
+        attributeKeys && attributeKeys.length > 0 ? (
           <Space size={[0, 8]} wrap>
-            {attributes.map((attribute) => (
-              <Tag color="blue" key={attribute.id}>
-                {`${attribute.name}: ${attribute.value}`}
+            {attributeKeys.map((key, index) => (
+              <Tag color="blue" key={index}>
+                {`${key}: ${record.attributeValues[index]}`}
               </Tag>
             ))}
           </Space>
@@ -323,136 +305,57 @@ return (
           };
         }}/>
 
-      <Modal
-        title={modalMode === 'add' ? 'Добавить ИС' : 'Редактировать ИС'}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
+<Modal
+  title={modalMode === 'add' ? 'Добавить ИС' : 'Редактировать ИС'}
+  open={isModalVisible}
+  onOk={handleModalOk}
+  onCancel={handleModalCancel}
+>
+  <Form form={form} layout="vertical">
+    <Form.Item
+      label="Название"
+      name="name"
+      rules={[{ required: true, message: 'Введите название!' }]}
+    >
+      <Input />
+    </Form.Item>
+    <Form.Item label="Описание" name="description">
+      <Input />
+    </Form.Item>
+    <Form.Item label="Ключи атрибутов" name="attributeKeys">
+      <Select
+        mode="multiple"
+        placeholder="Выберите ключи атрибутов"
+        onChange={handleAttributeKeyChange}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item label="Название" name="name" rules={[{ required: true, message: 'Введите название!' }]}>
-            <Input />
+        {existingAttributes.map(attr => (
+          <Option key={attr.name} value={attr.name}>
+            {attr.name}
+          </Option>
+        ))}
+      </Select>
+    </Form.Item>
+
+    {selectedAttributeKeys.map((key, index) => (
+      <Row key={index} gutter={16}>
+        <Col span={10}>
+          <Form.Item label={`Значение для ${key}`}>
+            <Input
+              value={attributeValues[key] || ''}
+              onChange={(e: { target: { value: React.ChangeEvent<HTMLInputElement>; }; }) => handleAttributeValueChange(key, e.target.value)}
+            />
           </Form.Item>
-        
-        
-        {/* Форма для редактирования атрибутов */}
-        {modalMode === 'edit' &&  selectedInfoSystem &&(
-            <> 
-              {selectedInfoSystem && selectedInfoSystem.attributes.map((attribute, index) => (
-                <div key={attribute.id}> 
-                  <Form.Item label={attribute.name} name={attribute.name}>
-                    <Input />
-                  </Form.Item>
-                  <Button type="danger" onClick={() => handleDeleteAttribute(attribute.id)}>
-                    Удалить
-                  </Button>
-                </div>
-              ))}
-              {/* Добавление новых атрибутов */}
-              <Form.List name="newExistingAttributes">
-                {(fields: any[], { add, remove }: any) => (
-                  <>
-                    {fields.map((field, index) => (
-                      <Row key={field.key} gutter={16}>
-                        <Col span={10}>
-                          <Form.Item
-                            {...field}
-                            label="Существующий атрибут"
-                            name={[field.name, 'attributeId']}
-                            fieldKey={[field.fieldKey, 'attributeId']}
-                            rules={[{ required: true, message: 'Выберите атрибут!' }]}
-                          >
-                      <Select placeholder="Выберите атрибут">
-                        {existingAttributes.map((attr) => (
-                          <Option key={attr.id} value={attr.id}>
-                            {attr.name}
-                          </Option>
-                        ))}
-                      </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  {...field}
-                  label="Значение"
-                  name={[field.name, 'value']}
-                  fieldKey={[field.fieldKey, 'value']}
-                  rules={[{ required: true, message: 'Введите значение!' }]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-                        <Col span={2}>
-                          <Button type="danger" onClick={() => remove(field.name)}>
-                            Удалить
-                          </Button>
-                        </Col>
-                      </Row>
-                    ))}
-                    <Form.Item>
-                      <Button type="dashed" onClick={() => add()} block>
-                        Добавить существующий атрибут
-                      </Button>
-                    </Form.Item>
-                  </>
-                )}
-              </Form.List>
-            </>
-          )}
-        {/* Форма для добавления атрибутов при создании ИС */}
-        {modalMode === 'add' && (
-           <Form.List name="newExistingAttributes">
-           {(fields: any[], { add, remove }: any) => (
-             <>
-               {fields.map((field, index) => (
-                 <Row key={field.key} gutter={16}>
-                   <Col span={10}>
-                     <Form.Item
-                       {...field}
-                       label="Существующий атрибут"
-                       name={[field.name, 'attributeId']}
-                       fieldKey={[field.fieldKey, 'attributeId']}
-                       rules={[{ required: true, message: 'Выберите атрибут!' }]}
-                     >
-                 <Select placeholder="Выберите атрибут">
-                   {existingAttributes.map((attr) => (
-                     <Option key={attr.id} value={attr.id}>
-                       {attr.name}
-                     </Option>
-                   ))}
-                 </Select>
-           </Form.Item>
-         </Col>
-         <Col span={12}>
-           <Form.Item
-             {...field}
-             label="Значение"
-             name={[field.name, 'value']}
-             fieldKey={[field.fieldKey, 'value']}
-             rules={[{ required: true, message: 'Введите значение!' }]}
-           >
-             <Input />
-           </Form.Item>
-         </Col>
-                   <Col span={2}>
-                     <Button type="danger" onClick={() => remove(field.name)}>
-                       Удалить
-                     </Button>
-                   </Col>
-                 </Row>
-               ))}
-               <Form.Item>
-                 <Button type="dashed" onClick={() => add()} block>
-                   Добавить существующий атрибут
-                 </Button>
-               </Form.Item>
-             </>
-           )}
-         </Form.List>
-        )}
-      </Form>
-    </Modal>
-  </div>
+        </Col>
+        <Col span={2}>
+          <Button type="danger" onClick={() => handleDeleteAttributeKey(index)}>
+            Удалить
+          </Button>
+        </Col>
+      </Row>
+    ))}
+  </Form>
+</Modal>
+    </div>
 );
 };
 

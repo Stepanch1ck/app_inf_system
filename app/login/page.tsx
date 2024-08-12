@@ -11,15 +11,16 @@ const LoginPage: React.FC = () => {
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5295/api/Auth/login', {
+      const response = await fetch('http://localhost:5219/Auth/signIn', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json-patch+json' },
         body: JSON.stringify(values),
       });
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('role', data.role);
         message.success('Вход выполнен!');
         router.push('/information-systems');
       } else {

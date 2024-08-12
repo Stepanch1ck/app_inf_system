@@ -1,10 +1,10 @@
 import fetchApi from "../utils/api";
 
 export interface UserRequest {
-    id: number;
+    id: string;
     username: string;
     password?: string;
-    roleId: number;
+    role: string;
 }
 
 

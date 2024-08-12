@@ -1,59 +1,103 @@
 import { message } from "antd";
 import fetchApi from "../utils/api";
 
-export interface InformationSystemRequest {
-    id: number;
+export interface CreateInfSystemRequest {
     name: string;
-    attributes: AttributeWithValue[];
-}
+    description: string;
+    attributeKeys: string[];
+    attributeValues: string[];
+  }
+  
+  export interface ChangeAttributesRequest {
+    name: string;
+    attrNames: string[];
+    attrValues: string[];
+  }
 
 
 
 export const getAllInfSystem = async () => {
-    const data = await fetchApi('InformationSystems/with-attributes', {
-        method: "GET",
-        headers: {},
-    });
-    return data;
-    
-};
-
-export const getInfSystem = async(id: string) => {
-    const data = await fetchApi(`InformationSystems/${id}/details`, {
-        method: "GET",
-        headers: {},
-    })
-    return data;
-}
-
-export const createInfSystem = async(infSysRequets : InformationSystemRequest) => {
+    // const data = await fetchApi('InfSystem/getsystems', {
+    //   method: "GET",
+    //   headers: {},
+    // });
+    // return data;
     const token = localStorage.getItem('token');
-    await fetch('http://localhost:5295/api/InformationSystems', {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify( infSysRequets),
+    const response = await fetch('http://localhost:5219/InfSystem/getsystems', {
+      method: "GET",
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
     });
-};
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка при получении данных'); 
+      }
+    const data = await response.json();
+    return data.json();
+  };
 
-export const updateInfSystem = async(id: string, infSysRequets : InformationSystemRequest) => {
+  export const getInfSystemByAttributeContain = async (attrName: string) => {
     const token = localStorage.getItem('token');
-    await fetch(`http://localhost:5295/api/InformationSystems/${id}/edit-with-attributes`, {
-        method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify( infSysRequets),
-    })
-}
+    const data = await fetch('http://localhost:5219/InfSystem/GetISWithAttribute?AttrName=${attrName}', {
+      method: "GET",
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data.json();
+  };
 
-export const deleteInfSystem = async(id: string) => {
-    await fetchApi(`InformationSystems/${id}`, {
-        method: "DELETE",
-        headers: {},
-    })
-    return true;
-}
+  export const createInfSystem = async (request: CreateInfSystemRequest) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5219/InfSystem/create', {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(request), 
+    });
+  
+    if (!response.ok) {
+      throw new Error(`Ошибка при создании ИС: ${response.status}`);
+    }
+  
+    return await response.json();
+  };
+
+  export const updateInfSystem = async (request: ChangeAttributesRequest) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5219/InfSystem/change`, {
+      method: "PUT",
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(request),
+    });
+  
+    if (!response.ok) {
+      throw new Error(`Ошибка при обновлении ИС: ${response.status}`);
+    }
+  
+    return await response.json();
+  };
+
+  export const deleteInfSystem = async (infSystemName: string) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5219/InfSystem/delete?infSystemName=${infSystemName}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  
+    if (!response.ok) {
+      throw new Error(`Ошибка при удалении ИС: ${response.status}`);
+    }
+  
+    return await response.json();
+  };

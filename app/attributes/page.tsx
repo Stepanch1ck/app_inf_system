@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Table, Space, Form, message, Input, Modal, Select } from 'antd';
+import { Table, Tag, Space, Form, message, Input, Modal, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Navigation from '../components/navigation';
 import { useRouter } from 'next/navigation';
 import  Option  from 'antd/es/select';
 import fetchApi from '../utils/api';
 import useFetchUser from '../utils/useFetchUser';
-import { AttributeWithTypeRequest, createAttribute, deleteAttribute, updateAttribute } from '../services/attribute';
+import { createAttribute, CreateAttributeRequest, deleteAttribute, DeleteAttributeRequest, getAllAttribute } from '../services/attribute';
 import SearchAndFilter from '../components/serach&filter';
 
 
@@ -40,8 +40,8 @@ const AttributesPage: React.FC = () => {
     const selectedAttribute = attributes.find(attr => attr.id === selectedId);
     if (selectedAttribute){
         form.setFieldsValue({
-            name: selectedAttribute.name,
-            dataType: selectedAttribute.dataType,
+          name: selectedAttribute.name,
+          description: selectedAttribute.description,
         });
         setModalMode('edit');
         setIsModalVisible(true);
@@ -56,64 +56,74 @@ const AttributesPage: React.FC = () => {
 
   const handleDelete = async () => {
     if (selectedRowKeys.length === 0) {
-        message.warning('Выберите строки для удаления.')
-        return;
+      message.warning('Выберите строки для удаления.');
+      return;
     }
-    try{
-        const deletePromises =selectedRowKeys.map(async (id) => {
-            const response = await deleteAttribute(id.toString());
-            if (!response) {
-                throw new Error(`Ошибка при удалении атрибута с ID: ${id}`);
-            }
-        });
-        await Promise.all(deletePromises);
-        message.success('Данные успешно удалены.');
-        setSelectedRowKeys([]);
-        await fetchAttributes()
+
+    try {
+      const selectedAttributeNames = selectedRowKeys
+      .map((id) => attributes.find(attr => attr.id === id)?.name)
+      .filter(name => name !== undefined) as string[]; // Filter out undefined names
+
+      const deletePromises = selectedAttributeNames.map(async (name) => {
+      const request: DeleteAttributeRequest = { name };
+      await deleteAttribute(request);
+      });
+
+      await Promise.all(deletePromises);
+
+      message.success('Данные успешно удалены.');
+      await fetchAttributes();
+      setSelectedRowKeys([]);
+      
     } catch (error) {
-        console.error('Ошибка при удалении данных:', error);
-        message.error('Ошибка при удалении данных.');
+      console.error('Ошибка при удалении данных:', error);
+      message.error('Ошибка при удалении данных.');
     }
   };
-  
   const handleModalOk = async () => {
     try {
-        const values = await form.validateFields();
-        const token = localStorage.getItem('token');
+      const values = await form.validateFields();
 
-        if (modalMode === 'add') {
-            if (!token) return;
-            const newAttr : AttributeWithTypeRequest = {
-              id: 0,
-              name: values.name,
-              dataType: values.dataType
-            };
-            await createAttribute(newAttr);
-        } else {
-            const selectedId = Number(selectedRowKeys[0]);
-            if (!token) return;
-              const updatedAttr: AttributeWithTypeRequest = {
-                id: selectedId,
-                name: values.name,
-                dataType: values.dataType,
-              };
-        }
-        await fetchAttributes()
-        setIsModalVisible(false);
-        form.resetFields();
-        setSelectedRowKeys([]);
-        message.success(modalMode === 'add' ? 'Данные успешно добавлены.' : 'Данные успешно обновлены.');
+      if (modalMode === 'add') {
+        const newAttr: CreateAttributeRequest = {
+          name: values.name,
+          description: values.description,
+          states: [""],
+        };
+        await createAttribute(newAttr);
+      } else {
+        const selectedId = Number(selectedRowKeys[0]);
+        const updatedAttr: CreateAttributeRequest = {
+          name: values.name,
+          description: values.description,
+        };
+        //await updateAttribute(selectedId, updatedAttr);
+      }
+
+      await fetchAttributes();
+      setIsModalVisible(false);
+      form.resetFields();
+      setSelectedRowKeys([]);
+      message.success(modalMode === 'add' ? 'Данные успешно добавлены.' : 'Данные успешно обновлены.');
     } catch (error) {
-        console.error(modalMode === 'add' ? 'Ошибка при подключении данных.': 'Ошибка при обновлении данных.')
+      console.error(modalMode === 'add' ? 'Ошибка при добавлении данных.' : 'Ошибка при обновлении данных.');
+      message.error(modalMode === 'add' ? 'Ошибка при добавлении данных.' : 'Ошибка при обновлении данных.');
     }
   };
 
   const fetchAttributes = async () => {
     try {
-      const data = await fetchApi('Attribute');
-      setAttributes(data);
-      setOriginalData(data);
-      setFilteredData(data);
+      const data = await getAllAttribute();
+      const normalizedData = data.map((attribute: Attribute) => ({
+        ...attribute,
+        states: Array.isArray(attribute.states) 
+          ? attribute.states 
+          : (typeof attribute.states === 'string' ? [attribute.states] : []),
+      }));
+      setAttributes(normalizedData);
+      setOriginalData(normalizedData);
+      setFilteredData(normalizedData);
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
       message.error('Ошибка при получении данных атрибутов.');
@@ -177,10 +187,11 @@ const AttributesPage: React.FC = () => {
       key: 'name',
     },
     {
-      title: 'Тип данных',
-      dataIndex: 'dataType',
-      key: 'dataType',
+      title: 'Описание',
+      dataIndex: 'description',
+      key: 'description',
     },
+    
   ];
 
   return (
@@ -201,16 +212,11 @@ const AttributesPage: React.FC = () => {
         filterOptions={filterOptions}
       />
       <Table columns={columns} dataSource={filteredData} 
-        onRow={(record: { id: React.Key; }, rowIndex: any) => {
-          return {
-            onClick: () => {
-              setSelectedRowKeys([record.id]); 
-            },
-          };
-        }}/>
+        rowKey="id"
+        rowSelection={rowSelection}/>
         
 
-      <Modal
+        <Modal
         title={modalMode === 'add' ? 'Добавить атрибут' : 'Редактировать атрибут'}
         open={isModalVisible}
         onOk={handleModalOk}
@@ -220,12 +226,8 @@ const AttributesPage: React.FC = () => {
           <Form.Item label="Название" name="name" rules={[{ required: true, message: 'Введите название!' }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="Тип данных" name="dataType" rules={[{ required: true, message: 'Выберите тип данных!' }]}>
-            <Select>
-              <Option value="string">Строка</Option>
-              <Option value="number">Число</Option>
-              <Option value="boolean">Логический</Option>
-            </Select>
+          <Form.Item label="Описание" name="description">
+            <Input />
           </Form.Item>
         </Form>
       </Modal>

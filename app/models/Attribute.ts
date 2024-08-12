@@ -1,11 +1,11 @@
-interface Attribute {
-    id: number;
-    name: string;
-    dataType: string;
-  }
-  
-  interface AttributeWithValue {
-    id: number;
-    name: string;
+interface AttributeKeyValue {
+    key: string;
     value: string;
+  }
+
+  interface Attribute {
+    id: string;
+    name: string;
+    description: string;
+    states?: string[];
   }

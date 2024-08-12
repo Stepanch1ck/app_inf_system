@@ -45,7 +45,7 @@ const AdminPage: React.FC = () => {
       form.setFieldsValue({
         username: selectedUser.username,
         password: '',
-        roleId: selectedUser.role.id,
+        roleId: selectedUser.role,
       });
       setModalMode('edit');
       setIsModalVisible(true);
@@ -57,7 +57,7 @@ const AdminPage: React.FC = () => {
       const data = await getAllUsers();
       const processedUsers = data.map((user: User) => ({
         ...user,
-        role: user.role.name,  
+        role: user.role,  
       }));
       setUsers(processedUsers);
       setOriginalData(processedUsers);
@@ -103,17 +103,17 @@ const AdminPage: React.FC = () => {
 
       if (modalMode === 'add') {
         const newUserRequest: UserRequest = {
-          id: 0,
+          id: '',
           username: values.username,
           password: values.password,
-          roleId: values.roleId,
+          role: values.role,
         };
         await createUser(newUserRequest);
       } else {
         const updatedUserRequest: UserRequest = {
-          id: Number(selectedId),
+          id: selectedId.toString(),
           username: values.username,
-          roleId: values.roleId,
+          role: values.role,
         };
   
         if (values.password) { 
@@ -181,12 +181,12 @@ const AdminPage: React.FC = () => {
     if (searchText) {
       filteredData = filteredData.filter(user =>
         user.username.toLowerCase().includes(searchText) ||
-        user.role.name.toLowerCase().includes(searchText) 
+        user.role.toLowerCase().includes(searchText) 
       );
     }
 
     if (selectedFilter) {
-      filteredData = filteredData.filter(user => user.roleid === parseInt(selectedFilter, 10));
+      filteredData = filteredData.filter(user => user.role === selectedFilter);
     }
 
     if (sortDirection) {
@@ -202,18 +202,18 @@ const AdminPage: React.FC = () => {
   const filterOptions = [
     {
       label: 'Администратор',
-      value: '1',
-      filterFn: (user: User, value: string) => user.roleid === parseInt(value, 10)
+      value: 'admin',
+      filterFn: (user: User, value: string) => user.role === value
     },
     {
       label: 'Редактор',
-      value: '2',
-      filterFn: (user: User, value: string) => user.roleid === parseInt(value, 10)
+      value: 'editor',
+      filterFn: (user: User, value: string) => user.role === value
     },
     {
       label: 'Просмотр',
-      value: '3',
-      filterFn: (user: User, value: string) => user.roleid === parseInt(value, 10)
+      value: 'viewer',
+      filterFn: (user: User, value: string) => user.role === value
     },
   ];
 
@@ -240,11 +240,10 @@ const AdminPage: React.FC = () => {
     router.push('/admin'); 
   };
   const options = [
-    { value: 1, label: 'Администратор' },
-    { value: 2, label: 'Редактор' },
-    { value: 3, label: 'Просмотр' },
+    { value: 'administrator', label: 'Администратор' },
+    { value: 'editor', label: 'Редактор' }, 
+    { value: 'viewer', label: 'Просмотр' },
   ];
-
 
   return (
     <div style={{ padding: '20px' }}>
