@@ -106,9 +106,9 @@ const AdminPage: React.FC = () => {
         await createUser(newUserRequest);
       } else {
         const updatedUserRequest: UserRequest = {
-          login: selectedUser!.login,
+          login: values.username,
           password: values.password,
-          role: selectedUser!.roleName,
+          role: values.role,
         };
         await updateUser(updatedUserRequest);
       }

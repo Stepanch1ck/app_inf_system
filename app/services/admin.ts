@@ -41,16 +41,13 @@ export const createUser = async(usrRequets : CreateUserRequest) => {
 
 export const updateUser = async(usrRequets : UserRequest) => {
     const token = localStorage.getItem('token');
-    await fetch(`http://localhost:5219/User/changePassword`, {
+    await fetch(`http://localhost:5219/User/changeUser`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json-patch+json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-            Login: usrRequets.login, 
-            Password: usrRequets.password, 
-        }),
+        body: JSON.stringify(usrRequets),
       });
 }
 
