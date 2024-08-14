@@ -1,50 +1,67 @@
 import fetchApi from "../utils/api";
 
 export interface UserRequest {
-    id: string;
-    username: string;
+    id?: string;
+    login: string;
     password?: string;
     role: string;
 }
 
+export interface CreateUserRequest {
+    username: string,
+    password: string,
+    role: string,
+  };
+
 
 export const getAllUsers = async () => {
-    const data = await fetchApi('Users', {
+    const token = localStorage.getItem('token');
+    const data = await fetch('http://localhost:5219/User/allusers', {
         method: "GET",
-        headers: {},
+        headers: {
+        'Content-Type': 'application/json-patch+json',
+          Authorization: `Bearer ${token}`,
+        },
     });
-    return data;
+    return data.json();
     
 };
 
-export const createUser = async(usrRequets : UserRequest) => {
+export const createUser = async(usrRequets : CreateUserRequest) => {
     const token = localStorage.getItem('token');
-    await fetch('http://localhost:5295/api/Users', {
+    await fetch('http://localhost:5219/User/signup', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json-patch+json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(usrRequets),
       });
 };
 
-export const updateUser = async(id: string, usrRequets : UserRequest) => {
+export const updateUser = async(usrRequets : UserRequest) => {
     const token = localStorage.getItem('token');
-    await fetch(`http://localhost:5295/api/Users/${id}`, {
+    await fetch(`http://localhost:5219/User/changePassword`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json-patch+json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(usrRequets),
+        body: JSON.stringify({
+            Login: usrRequets.login, 
+            Password: usrRequets.password, 
+        }),
       });
 }
 
-export const deleteUser = async(id: string) => {
-    await fetchApi(`Users/${id}`, {
+export const deleteUser = async(username: string) => {
+    const token = localStorage.getItem('token');
+    await fetch(`http://localhost:5219/User/delete?userName=${username}`, {
         method: 'DELETE',
-        headers: {},
+        headers: {
+            'Content-Type': 'application/json-patch+json',
+            Authorization: `Bearer ${token}`,
+        },
       });
     return true;
 }

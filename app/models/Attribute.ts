@@ -4,8 +4,16 @@ interface AttributeKeyValue {
   }
 
   interface Attribute {
-    id: string;
+    id: number;
     name: string;
     description: string;
-    states?: string[];
+    states?: { id: number; attributeId: number; value: string; infSystems: any[] }[];
+  }
+
+  interface AttributeStatement {
+    id: number;
+    attributeId: number;
+    attribute: Attribute;
+    value: string;
+    infSystems: any[];
   }

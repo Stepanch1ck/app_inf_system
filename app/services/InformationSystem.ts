@@ -17,24 +17,14 @@ export interface CreateInfSystemRequest {
 
 
 export const getAllInfSystem = async () => {
-    // const data = await fetchApi('InfSystem/getsystems', {
-    //   method: "GET",
-    //   headers: {},
-    // });
-    // return data;
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5219/InfSystem/getsystems', {
+    const data = await fetch('http://localhost:5219/InfSystem/getsystems', {
       method: "GET",
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Ошибка при получении данных'); 
-      }
-    const data = await response.json();
     return data.json();
   };
 
@@ -65,10 +55,10 @@ export const getAllInfSystem = async () => {
       throw new Error(`Ошибка при создании ИС: ${response.status}`);
     }
   
-    return await response.json();
+    return true;
   };
 
-  export const updateInfSystem = async (request: ChangeAttributesRequest) => {
+  export const updateInfSystem = async (id: number, request: ChangeAttributesRequest) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`http://localhost:5219/InfSystem/change`, {
       method: "PUT",
@@ -83,7 +73,7 @@ export const getAllInfSystem = async () => {
       throw new Error(`Ошибка при обновлении ИС: ${response.status}`);
     }
   
-    return await response.json();
+    return await true;
   };
 
   export const deleteInfSystem = async (infSystemName: string) => {
@@ -91,6 +81,7 @@ export const getAllInfSystem = async () => {
     const response = await fetch(`http://localhost:5219/InfSystem/delete?infSystemName=${infSystemName}`, {
       method: "DELETE",
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
     });
@@ -99,5 +90,5 @@ export const getAllInfSystem = async () => {
       throw new Error(`Ошибка при удалении ИС: ${response.status}`);
     }
   
-    return await response.json();
+    return ;
   };

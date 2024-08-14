@@ -63,7 +63,7 @@ const AttributesPage: React.FC = () => {
     try {
       const selectedAttributeNames = selectedRowKeys
       .map((id) => attributes.find(attr => attr.id === id)?.name)
-      .filter(name => name !== undefined) as string[]; // Filter out undefined names
+      .filter(name => name !== undefined) as string[];
 
       const deletePromises = selectedAttributeNames.map(async (name) => {
       const request: DeleteAttributeRequest = { name };
@@ -177,11 +177,6 @@ const AttributesPage: React.FC = () => {
 
   const columns: ColumnsType<Attribute> = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-    },
-    {
       title: 'Название',
       dataIndex: 'name',
       key: 'name',
@@ -212,7 +207,7 @@ const AttributesPage: React.FC = () => {
         filterOptions={filterOptions}
       />
       <Table columns={columns} dataSource={filteredData} 
-        rowKey="id"
+        rowKey="name"
         rowSelection={rowSelection}/>
         
 

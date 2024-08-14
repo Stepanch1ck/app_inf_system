@@ -25,7 +25,7 @@ export const getAllAttribute = async () => {
     const data = await fetch('http://localhost:5219/Attribute/getattributes', {
       method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json-patch+json',
         Authorization: `Bearer ${token}`,
       },
     });
@@ -37,7 +37,7 @@ export const createAttribute = async (request: CreateAttributeRequest) => {
   const response = await fetch('http://localhost:5219/Attribute/create', { 
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json-patch+json',
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(request), 
@@ -55,7 +55,7 @@ export const deleteAttribute = async (request: DeleteAttributeRequest) => {
   const response = await fetch('http://localhost:5219/Attribute/delete', { 
     method: 'DELETE',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json-patch+json',
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(request), 
@@ -73,7 +73,7 @@ export const addNewState = async (request: AddNewStateRequest) => {
   const response = await fetch('http://localhost:5219/Attribute/addState', {
     method: 'PUT',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json-patch+json',
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(request), 
@@ -91,7 +91,7 @@ export const removeState = async (request: RemoveStateRequest) => {
   const response = await fetch('http://localhost:5219/Attribute/removeState', {
     method: 'PUT',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json-patch+json',
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(request), 

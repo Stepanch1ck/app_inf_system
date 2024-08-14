@@ -6,9 +6,13 @@ interface CreateInfSystemRequest {
     attributeValues: string[];
   }
   interface InformationSystem {
-    id: string;
+    id: number;
     name: string;
     description: string;
-    attributeKeys: string[];
-    attributeValues: string[];
+    attributeStatements: {
+      id: number;
+      attributeId: number;
+      attribute: Attribute;
+      value: string;
+    }[];
   }
