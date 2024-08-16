@@ -7,9 +7,11 @@ export interface CreateInfSystemRequest {
     attributeKeys: string[];
     attributeValues: string[];
   }
-  
-  export interface ChangeAttributesRequest {
+
+  export interface UpdateInfSystemRequest {
     name: string;
+    newName: string;
+    newDescription: string;
     attrNames: string[];
     attrValues: string[];
   }
@@ -58,7 +60,7 @@ export const getAllInfSystem = async () => {
     return true;
   };
 
-  export const updateInfSystem = async (id: number, request: ChangeAttributesRequest) => {
+  export const updateInfSystem = async ( request: UpdateInfSystemRequest) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`http://localhost:5219/InfSystem/change`, {
       method: "PUT",

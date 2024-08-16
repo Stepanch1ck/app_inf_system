@@ -107,11 +107,13 @@ const InformationSystemsPage: React.FC = () => {
       if (modalMode === 'edit') { 
           const updateRequest = {
             name: values.name,
+            newName: values.newName || values.name,
+            newDescription: values.description,
             attrNames: selectedAttributeKeys,
             attrValues: selectedAttributeKeys.map(key => attributeValues[key]),
           };
   
-          await updateInfSystem(selectedInfoSystem!.id, updateRequest); 
+          await updateInfSystem(updateRequest); 
       } else if (modalMode === 'add') {
         const newInfoSystem: CreateInfSystemRequest = {
           name: values.name,
@@ -167,8 +169,22 @@ const InformationSystemsPage: React.FC = () => {
   };
 
   const handleAttributeKeyChange = (value: string[]) => {
-    const updatedKeys = Array.from(new Set([...selectedAttributeKeys, ...value]));
-  setSelectedAttributeKeys(updatedKeys);
+    if (modalMode === 'edit') {
+      setSelectedAttributeKeys(prevKeys => {
+        const updatedKeys = [...prevKeys]; 
+        value.forEach(key => {
+          const index = updatedKeys.indexOf(key);
+          if (index > -1) {
+            updatedKeys.splice(index, 1);
+          } else {
+            updatedKeys.push(key);
+          }
+        });
+        return updatedKeys; 
+      });
+    } else {
+      setSelectedAttributeKeys(value); 
+    }
   };
 
   const handleAttributeValueChange = (key: string, value: string) => {
@@ -216,13 +232,25 @@ const InformationSystemsPage: React.FC = () => {
 
     if (searchText) {
       filteredData = filteredData.filter(item => {
-        return (
-          item.name.toLowerCase().includes(searchText) ||
-          item.attributeStatements.some(s => 
-            s.attribute.name.toLowerCase().includes(searchText) ||
-            s.value.toLowerCase().includes(searchText)
-          )
-        );
+        const lowerCaseSearchText = searchText.toLowerCase(); 
+        if (
+          item.name.toLowerCase().includes(lowerCaseSearchText) ||
+          item.description.toLowerCase().includes(lowerCaseSearchText)
+        ) {
+          return true;
+        }
+  
+        return item.attributeStatements.some(statement => {
+          const attributeName = statement.attribute.name.toLowerCase();
+          const attributeDescription = statement.attribute.description.toLowerCase();
+          const attributeValue = statement.value.toLowerCase();
+  
+          return (
+            attributeName.includes(lowerCaseSearchText) ||
+            attributeDescription.includes(lowerCaseSearchText) ||
+            attributeValue.includes(lowerCaseSearchText)
+          );
+        });
       });
     }
 
@@ -232,8 +260,11 @@ const InformationSystemsPage: React.FC = () => {
         filteredData = filteredData.filter(item => filterOption.filterFn(item, selectedFilter));
       }
     }
-
-    setFilteredData(filteredData);
+    if (searchText || selectedFilter) {
+      setFilteredData(filteredData);
+    } else {
+      setFilteredData(originalData);
+    }
   };
 
   const handleAdmin = () => {
@@ -260,7 +291,7 @@ const InformationSystemsPage: React.FC = () => {
           <ul>
             {attributeStatements.map((statement) => (
               <li key={statement.id}>
-                <strong>{statement.attribute.description}:</strong> {statement.value} 
+                <strong>{statement.attributeName}:</strong> {statement.value} 
               </li>
             ))}
           </ul>
@@ -286,6 +317,7 @@ return (
       onFilter={handleFilter}
       onSearch={handleSearch}
       filterOptions={filterOptions}
+      showFilter={true} 
     />
       <h1>Информационные системы</h1>
       <Table 
@@ -305,10 +337,18 @@ return (
     <Form.Item
       label="Название"
       name="name"
-      rules={[{ required: true, message: 'Введите название!' }]}
+    >
+      <Input disabled={modalMode === 'edit'}/>
+      
+    </Form.Item>
+    {modalMode === 'edit' && (
+    <Form.Item
+      label="Новое название (если менять не нужно, оставьте пустым)"
+      name="newName"
     >
       <Input />
-    </Form.Item>
+      </Form.Item>
+    )}
     <Form.Item label="Описание" name="description">
       <Input />
     </Form.Item>
@@ -317,8 +357,13 @@ return (
         mode="multiple"
         placeholder="Выберите ключи атрибутов"
         onChange={handleAttributeKeyChange}
+        value={selectedAttributeKeys} 
       >
-        {existingAttributes.map(attr => (
+        {existingAttributes
+              .filter(attr => 
+                modalMode === 'add' || 
+                !selectedInfoSystem?.attributeStatements.map(s => s.attribute.name).includes(attr.name)
+              ).map(attr => (
           <Option key={attr.name} value={attr.name}>
             {attr.name}
           </Option>

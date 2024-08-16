@@ -234,6 +234,7 @@ const AdminPage: React.FC = () => {
         onFilter={handleFilter}
         onSearch={handleSearch}
         filterOptions={filterOptions}
+        showFilter={true} 
       />
 
       <h1>Пользователи</h1>
@@ -253,9 +254,8 @@ const AdminPage: React.FC = () => {
           <Form.Item
             label="Имя пользователя"
             name="username"
-            rules={[{ required: true, message: 'Введите имя пользователя!' }]}
           >
-            <Input />
+            <Input disabled={modalMode === 'edit'}/>
           </Form.Item>
           <Form.Item
             label="Пароль"

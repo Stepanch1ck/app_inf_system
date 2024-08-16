@@ -6,6 +6,12 @@ export interface CreateAttributeRequest {
   states?: string[];
 }
 
+export interface UpdateAttributeRequest {
+  name: string;
+  newName: string;
+  description: string;
+}
+
 export interface DeleteAttributeRequest {
   name: string;
 }
@@ -36,6 +42,24 @@ export const createAttribute = async (request: CreateAttributeRequest) => {
   const token = localStorage.getItem('token');
   const response = await fetch('http://localhost:5219/Attribute/create', { 
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json-patch+json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(request), 
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ошибка при создании атрибута: ${response.status}`);
+  }
+
+  return true; 
+};
+
+export const UpdateAttribute = async (request: UpdateAttributeRequest) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch('http://localhost:5219/Attribute/change', { 
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json-patch+json',
       Authorization: `Bearer ${token}`,

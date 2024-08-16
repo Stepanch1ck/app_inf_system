@@ -11,6 +11,7 @@ interface CreateInfSystemRequest {
     description: string;
     attributeStatements: {
       id: number;
+      attributeName: string;
       attributeId: number;
       attribute: Attribute;
       value: string;

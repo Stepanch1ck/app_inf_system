@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import  Option  from 'antd/es/select';
 import fetchApi from '../utils/api';
 import useFetchUser from '../utils/useFetchUser';
-import { createAttribute, CreateAttributeRequest, deleteAttribute, DeleteAttributeRequest, getAllAttribute } from '../services/attribute';
+import { createAttribute, CreateAttributeRequest, deleteAttribute, DeleteAttributeRequest, getAllAttribute, UpdateAttribute, UpdateAttributeRequest } from '../services/attribute';
 import SearchAndFilter from '../components/serach&filter';
 
 
@@ -35,9 +35,10 @@ const AttributesPage: React.FC = () => {
   const handleEdit = () => {
     if (selectedRowKeys.length != 1){
         message.warning('Выберите одну строку для редактирования.')
+        return;
     }
     const selectedId = selectedRowKeys[0];
-    const selectedAttribute = attributes.find(attr => attr.id === selectedId);
+    const selectedAttribute = attributes.find(attr => attr.name === selectedId);
     if (selectedAttribute){
         form.setFieldsValue({
           name: selectedAttribute.name,
@@ -61,14 +62,12 @@ const AttributesPage: React.FC = () => {
     }
 
     try {
-      const selectedAttributeNames = selectedRowKeys
-      .map((id) => attributes.find(attr => attr.id === id)?.name)
-      .filter(name => name !== undefined) as string[];
+      const selectedAttributes = attributes.filter(attr => selectedRowKeys.includes(attr.name));
 
-      const deletePromises = selectedAttributeNames.map(async (name) => {
-      const request: DeleteAttributeRequest = { name };
+    const deletePromises = selectedAttributes.map(async (attribute) => {
+      const request: DeleteAttributeRequest = { name: attribute.name };
       await deleteAttribute(request);
-      });
+    });
 
       await Promise.all(deletePromises);
 
@@ -93,12 +92,12 @@ const AttributesPage: React.FC = () => {
         };
         await createAttribute(newAttr);
       } else {
-        const selectedId = Number(selectedRowKeys[0]);
-        const updatedAttr: CreateAttributeRequest = {
+        const updatedAttr: UpdateAttributeRequest = {
           name: values.name,
+          newName: values.NewName,
           description: values.description,
         };
-        //await updateAttribute(selectedId, updatedAttr);
+        await UpdateAttribute(updatedAttr);
       }
 
       await fetchAttributes();
@@ -205,6 +204,7 @@ const AttributesPage: React.FC = () => {
         onFilter={handleFilter}
         onSearch={handleSearch}
         filterOptions={filterOptions}
+        showFilter={false} 
       />
       <Table columns={columns} dataSource={filteredData} 
         rowKey="name"
@@ -219,8 +219,16 @@ const AttributesPage: React.FC = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item label="Название" name="name" rules={[{ required: true, message: 'Введите название!' }]}>
-            <Input />
+          <Input disabled={modalMode === 'edit'}/>
           </Form.Item>
+          {modalMode === 'edit' && (
+            <Form.Item
+              label="Новое название (если менять не нужно, оставьте пустым)"
+              name="newName"
+            >
+              <Input />
+              </Form.Item>
+            )}
           <Form.Item label="Описание" name="description">
             <Input />
           </Form.Item>
