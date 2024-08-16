@@ -96,8 +96,13 @@ const AdminPage: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      const existingNames = originalData.map(is => is.login);
 
       if (modalMode === 'add') {
+        if (values.newName && values.newName !== values.name && existingNames.includes(values.newName)) {
+          message.error('Пользователь с таким именем уже существует.');
+          return;
+        }
         const newUserRequest: CreateUserRequest = {
           username: values.username,
           password: values.password,

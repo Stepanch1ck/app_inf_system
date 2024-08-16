@@ -103,8 +103,13 @@ const InformationSystemsPage: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      const existingNames = originalData.map(is => is.name);
 
       if (modalMode === 'edit') { 
+        if (values.newName && values.newName !== values.name && existingNames.includes(values.newName)) {
+          message.error('Информационная система с таким именем уже существует.');
+          return;
+        }
           const updateRequest = {
             name: values.name,
             newName: values.newName || values.name,
@@ -115,6 +120,10 @@ const InformationSystemsPage: React.FC = () => {
   
           await updateInfSystem(updateRequest); 
       } else if (modalMode === 'add') {
+        if (existingNames.includes(values.name)) {
+          message.error('Информационная система с таким именем уже существует.');
+          return;
+        }
         const newInfoSystem: CreateInfSystemRequest = {
           name: values.name,
           description: values.description,

@@ -84,7 +84,13 @@ const AttributesPage: React.FC = () => {
     try {
       const values = await form.validateFields();
 
+      const existingNames = originalData.map(is => is.name);
+
       if (modalMode === 'add') {
+        if (values.newName && values.newName !== values.name && existingNames.includes(values.newName)) {
+          message.error('Атрибут с таким именем уже существует.');
+          return;
+        }
         const newAttr: CreateAttributeRequest = {
           name: values.name,
           description: values.description,
@@ -92,6 +98,10 @@ const AttributesPage: React.FC = () => {
         };
         await createAttribute(newAttr);
       } else {
+        if (existingNames.includes(values.name)) {
+          message.error('Атрибут с таким именем уже существует.');
+          return;
+        }
         const updatedAttr: UpdateAttributeRequest = {
           name: values.name,
           newName: values.NewName,
