@@ -30,7 +30,7 @@ const Navigation: React.FC<NavigationProps> = ({ onEdit, onAdd, onDelete, onAdmi
         </Link>
         {isAdmin && (
           <Link href="/admin">
-            <Button type="primary">Администратор</Button>
+            <Button type="primary">Пользователи</Button>
           </Link>
         )}
       </Space>

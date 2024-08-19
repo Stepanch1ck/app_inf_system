@@ -321,6 +321,7 @@ return (
         onAdmin={handleAdmin}
         userRoles={userRoles}
       />
+       <h1>Информационные системы</h1>
      <SearchAndFilter 
       data={originalData}
       onFilter={handleFilter}
@@ -328,7 +329,7 @@ return (
       filterOptions={filterOptions}
       showFilter={true} 
     />
-      <h1>Информационные системы</h1>
+     
       <Table 
         columns={columns} 
         dataSource={filteredData} 

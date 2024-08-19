@@ -233,7 +233,7 @@ const AdminPage: React.FC = () => {
         userRoles={userRoles}
         
       />
-
+      <h1>Пользователи</h1>
       <SearchAndFilter
         data={originalData}
         onFilter={handleFilter}
@@ -242,7 +242,7 @@ const AdminPage: React.FC = () => {
         showFilter={true} 
       />
 
-      <h1>Пользователи</h1>
+      
       <Table columns={columns} dataSource={filteredData} 
       rowKey="login"
       rowSelection={rowSelection}
