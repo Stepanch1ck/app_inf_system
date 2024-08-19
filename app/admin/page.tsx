@@ -220,7 +220,7 @@ const AdminPage: React.FC = () => {
   const options = [
     { value: 'ADMIN', label: 'Администратор' },
     { value: 'CREATOR', label: 'Редактор' }, 
-    { value: 'READER', label: 'Просмотр' },
+    { value: 'READER', label: 'Читатель' },
   ];
 
   return (
@@ -270,7 +270,7 @@ const AdminPage: React.FC = () => {
             <Input.Password />
           </Form.Item>
           <Form.Item label="Роль" name="role" rules={[{ required: true, message: 'Выберите роль!' }]} >
-          <Select options={options} defaultValue="Просмотр" />
+          <Select options={options}/>
           </Form.Item>
         </Form>
       </Modal>

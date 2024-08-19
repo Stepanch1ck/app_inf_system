@@ -19,6 +19,7 @@ export interface CreateInfSystemRequest {
 
 
 export const getAllInfSystem = async () => {
+  try{
     const token = localStorage.getItem('token');
     const data = await fetch('http://localhost:5219/InfSystem/getsystems', {
       method: "GET",
@@ -28,6 +29,9 @@ export const getAllInfSystem = async () => {
       },
     });
     return data.json();
+  } catch (error) {
+    throw error;
+  }
   };
 
   export const getInfSystemByAttributeContain = async (attrName: string) => {

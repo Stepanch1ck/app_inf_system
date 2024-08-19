@@ -87,7 +87,7 @@ const AttributesPage: React.FC = () => {
       const existingNames = originalData.map(is => is.name);
 
       if (modalMode === 'add') {
-        if (values.newName && values.newName !== values.name && existingNames.includes(values.newName)) {
+        if (existingNames.includes(values.name)) {
           message.error('Атрибут с таким именем уже существует.');
           return;
         }
@@ -98,13 +98,13 @@ const AttributesPage: React.FC = () => {
         };
         await createAttribute(newAttr);
       } else {
-        if (existingNames.includes(values.name)) {
+        if (values.newName && values.newName !== values.name && existingNames.includes(values.newName)) {
           message.error('Атрибут с таким именем уже существует.');
           return;
         }
         const updatedAttr: UpdateAttributeRequest = {
           name: values.name,
-          newName: values.NewName,
+          newName: values.newName || values.name,
           description: values.description,
         };
         await UpdateAttribute(updatedAttr);

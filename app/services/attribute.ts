@@ -1,4 +1,3 @@
-import fetchApi from "../utils/api";
 
 export interface CreateAttributeRequest {
   name: string;

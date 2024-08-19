@@ -83,7 +83,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps<any>> = ({ data, onFilter, 
       });
     }
 
-    if (searchText === '' && selectedFilter === null) {
+    if (searchText === '' && selectedFilter === null && sortDirection === null) {
       filteredData = data;
     }
 
